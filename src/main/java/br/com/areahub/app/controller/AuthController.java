@@ -6,6 +6,7 @@ import br.com.areahub.app.dto.UserResponseDTO;
 import br.com.areahub.app.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +26,16 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public void authenticationUser(@Valid @RequestBody LoginRequestDTO auth){
+    public ResponseEntity<Void> authenticationUser(@Valid @RequestBody LoginRequestDTO requestDTO){
+        var token = authService.authenticationUser(requestDTO);
+
+        ResponseCookie cookie = ResponseCookie.from("backendAreaHub", token)
+                .httpOnly(true)
+                .path("/")
+                .secure(false)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok().header("Set-Cookie", cookie.toString()).build();
     }
 }

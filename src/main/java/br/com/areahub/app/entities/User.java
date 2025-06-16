@@ -3,9 +3,11 @@ package br.com.areahub.app.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.*;
 
 @Builder
 @AllArgsConstructor
@@ -14,7 +16,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "tb_users")
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,7 +44,7 @@ public class User {
     private Role role;
 
     @Column(name = "active", nullable = false)
-    private boolean active = true;
+    private Boolean active = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -52,5 +54,41 @@ public class User {
         this.createdAt = LocalDateTime.now();
         this.publicId = UUID.randomUUID();
         this.active = true;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+
+        if (role == null) return new ArrayList<>();
+
+        var authorities = new ArrayList<>(Optional.ofNullable(role)
+                .map(Role::getPermissions)
+                .map(permissions -> permissions.stream()
+                        .map(permission -> (GrantedAuthority) permission::getName)
+                        .toList()).orElse(new ArrayList<>()));
+
+        authorities.add((GrantedAuthority) () -> "ROLE_" + role.getName());
+
+        return authorities;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.active;
     }
 }
